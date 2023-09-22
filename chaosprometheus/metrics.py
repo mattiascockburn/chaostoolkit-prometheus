@@ -1,6 +1,6 @@
+import os
 from secrets import token_hex
-from typing import Dict, List
-
+from typing import Any, Callable, Dict, List
 from chaoslib import __version__, experiment_hash
 from chaoslib.types import Experiment, Journal
 from prometheus_client import (
@@ -11,6 +11,7 @@ from prometheus_client import (
     Histogram,
     push_to_gateway,
 )
+from requests import Session
 
 __all__ = ["configure_control", "after_experiment_control"]
 
@@ -160,4 +161,26 @@ class PrometheusCollector:
             job=self.job,
             registry=self.registry,
             grouping_key=self.grouping_key,
+            handler=custom_handler
         )
+
+
+def custom_handler(
+    url: str,
+    method: str,
+    timeout: int,
+    headers: list,
+    data: Any,
+    ):
+    """
+    Implement a bare bones custom handler for pushing metrics to make disabling the TLS verification
+    work
+    """
+    verify_tls = os.environ.get('VERIFY_TLS', 'TRUE').upper() == 'TRUE'
+    # handler
+    # url=url, method=method, timeout=timeout,
+    # headers=[('Content-Type', CONTENT_TYPE_LATEST)], data=data,
+    s = Session()
+    s.verify = verify_tls
+    s.request(url=url, method=method, headers=headers, data=data, timeout=timeout)
+
