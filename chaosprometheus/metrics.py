@@ -25,6 +25,7 @@ def configure_control(
     grouping_key: Dict[str, str] = None,
     trace_id: str = None,
     experiment_ref: str = None,
+    verify_tls: bool = None,
     **kwargs
 ):
     """
@@ -47,8 +48,14 @@ def configure_control(
     provided, it'll be set to a random string as a label.
     """
     global collector
+
+    pushgateway_url = pushgateway_url or configuration.get('pushgateway_url', 'http://localhost:9091')
+    experiment_ref = experiment_ref or configuration.get('experiment_ref')
+    trace_id = trace_id or configuration.get('trace_id')
+    verify_tls = verify_tls or configuration.get('verify_tls')
+
     collector = PrometheusCollector(
-        pushgateway_url, job, trace_id, experiment_ref, grouping_key, experiment
+        pushgateway_url, job, trace_id, experiment_ref, grouping_key, experiment, verify_tls
     )
 
 
@@ -74,6 +81,7 @@ def after_experiment_control(state: Journal, *args, **kwargs) -> None:
 # Private functions
 ###############################################################################
 class PrometheusCollector:
+    verify_tls = True
     def __init__(
         self,
         pushgateway_url: str,
@@ -82,6 +90,7 @@ class PrometheusCollector:
         experiment_ref: str,
         grouping_key: Dict[str, str],
         experiment: Experiment,
+        verify_tls: bool
     ) -> None:
         self.pushgateway_url = pushgateway_url
         self.job = job
@@ -90,6 +99,8 @@ class PrometheusCollector:
         self.grouping_key = grouping_key or {
             "chaostoolkit_experiment_ref": self.experiment_ref
         }
+        if verify_tls != None:
+            PrometheusCollector.verify_tls = verify_tls
 
         labels = [
             "source",
@@ -161,3 +172,23 @@ class PrometheusCollector:
             registry=self.registry,
             grouping_key=self.grouping_key,
         )
+
+
+def _custom_handler(
+    url: str,
+    method: str,
+    timeout: int,
+    headers: list,
+    data: Any,
+    ) -> Callable:
+    """
+    Bare bones custom handler for pushing metrics to enable more complex
+    scenarios. This function is fed into push_to_gateway()
+    We also use requests to benefit from its feature set like e.g. proxy support
+    """
+    def handler() -> None:
+        s = Session()
+        s.verify = PrometheusCollector.verify_tls
+        h = {k:v for k,v in headers}
+        s.request(url=url, method=method, headers=h, data=data, timeout=timeout)
+    return handler
