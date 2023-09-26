@@ -11,6 +11,7 @@ from prometheus_client import (
     Histogram,
     push_to_gateway,
 )
+from logzero import logger
 from requests import Session
 
 __all__ = ["configure_control", "after_experiment_control"]
@@ -56,9 +57,8 @@ def configure_control(
     )
     experiment_ref = experiment_ref or configuration.get("experiment_ref")
     trace_id = trace_id or configuration.get("trace_id")
-    verify_tls = verify_tls or configuration.get("verify_tls")
-    if not verify_tls:
-        verify_tls = 'true'
+    verify_tls = verify_tls or configuration.get("verify_tls", 'true')
+    logger.debug(f"Config: {configuration}")
 
     collector = PrometheusCollector(
         pushgateway_url,
