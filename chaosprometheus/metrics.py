@@ -27,7 +27,7 @@ def configure_control(
     grouping_key: Dict[str, str] = None,
     trace_id: str = None,
     experiment_ref: str = None,
-    verify_tls: bool = None,
+    verify_tls: str = None,
     **kwargs
 ):
     """
@@ -57,6 +57,8 @@ def configure_control(
     experiment_ref = experiment_ref or configuration.get("experiment_ref")
     trace_id = trace_id or configuration.get("trace_id")
     verify_tls = verify_tls or configuration.get("verify_tls")
+    if not verify_tls:
+        verify_tls = 'true'
 
     collector = PrometheusCollector(
         pushgateway_url,
@@ -101,7 +103,7 @@ class PrometheusCollector:
         experiment_ref: str,
         grouping_key: Dict[str, str],
         experiment: Experiment,
-        verify_tls: bool,
+        verify_tls: str,
     ) -> None:
         self.pushgateway_url = pushgateway_url
         self.job = job
@@ -110,8 +112,7 @@ class PrometheusCollector:
         self.grouping_key = grouping_key or {
             "chaostoolkit_experiment_ref": self.experiment_ref
         }
-        if verify_tls is not None:
-            PrometheusCollector.verify_tls = verify_tls
+        PrometheusCollector.verify_tls = verify_tls.upper() == "TRUE"
 
         labels = [
             "source",
