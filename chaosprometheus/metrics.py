@@ -183,6 +183,7 @@ class PrometheusCollector:
             job=self.job,
             registry=self.registry,
             grouping_key=self.grouping_key,
+            handler=_custom_handler
         )
 
 
