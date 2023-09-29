@@ -1,5 +1,5 @@
 from secrets import token_hex
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable, Dict, List, Optional
 
 from chaoslib import __version__, experiment_hash
 from chaoslib.types import Configuration, Experiment, Journal
@@ -25,9 +25,9 @@ def configure_control(
     pushgateway_url: str = "http://localhost:9091",
     job: str = "chaostoolkit",
     grouping_key: Dict[str, str] = None,
-    trace_id: str = None,
-    experiment_ref: str = None,
-    verify_tls: str = None,
+    trace_id: Optional[str] = None,
+    experiment_ref: Optional[str] = None,
+    verify_tls: Optional[bool] = None,
     **kwargs
 ):
     """
@@ -58,7 +58,7 @@ def configure_control(
     trace_id = trace_id or configuration.get("trace_id")
     verify_tls = verify_tls or configuration.get("verify_tls")
     if not verify_tls:
-        verify_tls = 'true'
+        verify_tls = True
 
     collector = PrometheusCollector(
         pushgateway_url,
@@ -103,7 +103,7 @@ class PrometheusCollector:
         experiment_ref: str,
         grouping_key: Dict[str, str],
         experiment: Experiment,
-        verify_tls: str,
+        verify_tls: bool,
     ) -> None:
         self.pushgateway_url = pushgateway_url
         self.job = job
@@ -112,7 +112,7 @@ class PrometheusCollector:
         self.grouping_key = grouping_key or {
             "chaostoolkit_experiment_ref": self.experiment_ref
         }
-        PrometheusCollector.verify_tls = verify_tls.upper() == "TRUE"
+        PrometheusCollector.verify_tls = str(verify_tls).upper() == "TRUE"
 
         labels = [
             "source",
